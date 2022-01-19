@@ -2,7 +2,6 @@
 // Labb #1 | HI1024 | TIMEL2021
 // Sinan Pasic
 
-
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -12,9 +11,10 @@ struct simulation {
     double height;
     double velocity;
     double fuel;
-    int time;
+    int    time;
 } simdata;
 
+// simp = sim pointer but the name still amused me.
 static struct simulation const default_sim = { 250.0, -25.0, 500.0, 0 };
 
 void         sim_init           (struct simulation *simp);
@@ -55,11 +55,12 @@ sim_printheader(void)
     puts("Time Height Velocity Fuel   Throttle?");
 }
 
-// 1. It makes more sense to clamp than to quit or re-prompt
+// It makes more sense to clamp than to quit or re-prompt.
+// So if the user inputs a number larger than max or lower than min thrust it'll clamp to either 0 or 100% thrust, rather than crash.
+// Error handling for NaN values are handled by the 
 double
 sim_sanitize(struct simulation *simp, double value)
 {
-    // 1
     if (value < 0.0)
         return 0.0;
 
@@ -78,6 +79,7 @@ sim_get_quitreason(struct simulation const *simp)
     if(feof(stdin))
         return "The player quit";
 
+    // Shouldn't be possible to arrive here at runtime
     return "A wizard zapped the lander idk";
 }
 
@@ -91,6 +93,8 @@ sim_step(struct simulation *simp)
         if(simp->velocity < -2.0)
             goto exit_lose;
 
+        // I rarely use gotos but the defense here is that it's immediately exiting and intentionally does not go to any other labels.
+        // This is perfectly readable and moves all the exit stuff to the end where it belongs.
         goto exit_win;
     }
 
@@ -157,6 +161,14 @@ strtou64(char const *buffer, size_t bufsz)
     return out;
 }
 
+// Reads as many digits as possible up to a decimal point to parse a number out of it.
+// The macro is a "while 0" loop, which gives a scope to work with.
+// Can be replaced with naked braces but could result in compiler complaints.
+
+// buffer goes in => "123456.789" => DIGIT_BUFFER_SETUP => double digit_value comes out => 123456.0
+// buffer goes in => "789" => DIGIT_BUFFER_SETUP => double digit_value comes out => 789.0
+// 789.0 => 78.9 => 7.89 => .789 => 123456.0 + .789 => 123456.789 => * -1 => -123456.789
+// match - buffer gives the distance match is away from the start of the buffer.
 #define DIGIT_BUFFER_SETUP() do { \
     size_t dbuflen; \
     char digit_buffer[32]; \
@@ -171,13 +183,13 @@ strtou64(char const *buffer, size_t bufsz)
 double
 strtodouble(char const *buffer, size_t bufsz)
 {
-    double accum;
+    double accum;           // Accumulates further the more the given string needs to be parsed.
     double sign = 1.0;
-    double digit_value;
-    char const *match;
+    double digit_value;     // Used by DIGIT_BUFFER_SETUP()
+    char const *match;      // Holds results from memchr.
 
     match = memchr(buffer, '-', bufsz);
-
+    
     if (match != NULL) {
         sign = -1.0;
         ++match;
@@ -208,6 +220,10 @@ strtodouble(char const *buffer, size_t bufsz)
 
 #undef DIGIT_BUFFER_SETUP
 
+// Arguably the most complicated part of the program, simply due to the amount of string and buffer manipulations.
+// The loop reads from getchar() until the result is either EOF or \n.
+// Even if the buffer is exceeded, the characters outside of the 32-bit scope will be disposed.
+// After that, the buffer and its length will be fed into strtodouble() to be parsed into a double.
 double
 read_float(char const *prompt)
 {
@@ -228,7 +244,7 @@ read_float(char const *prompt)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
     struct simulation sim;
 
@@ -237,6 +253,8 @@ main(void)
     sim_printheader();
     sim_printstate(&sim);
 
+    // Calls the sim_step function until it returns 0.
+    // It doesn't need to do anything so I just put a null statement ; for readability.
     while (sim_step(&sim))
         ;
 
