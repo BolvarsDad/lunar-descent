@@ -29,7 +29,7 @@ size_t       strncpy_digits     (char *dest, char const *buffer, size_t bufsz);
 uint64_t     strtou64           (char const *buffer, size_t bufsz);
 double       strtodouble        (char const *buffer, size_t bufsz);
 double       read_float         (char const *prompt);
-int          main               (void);
+int          main               (int argc, char **argv);
 
 void
 sim_init(struct simulation *simp)
@@ -46,18 +46,16 @@ velocity_step(double throttle)
 void
 sim_printstate(struct simulation *simp)
 {
-    printf("%4u %6.2lf %8.2lf %6.2lf ", simp->time, simp->height, simp->velocity, simp->fuel);
+    printf("%-3u s  %-6.2lf m  %-6.2lf m/s  %-6.2lf kg  ", simp->time, simp->height, simp->velocity, simp->fuel);
 }
 
 void
 sim_printheader(void)
 {
-    puts("Time Height Velocity Fuel   Throttle?");
+    puts("Time   Height    Velocity    Fuel       Throttle?");
 }
 
 // It makes more sense to clamp than to quit or re-prompt.
-// So if the user inputs a number larger than max or lower than min thrust it'll clamp to either 0 or 100% thrust, rather than crash.
-// Error handling for NaN values are handled by the 
 double
 sim_sanitize(struct simulation *simp, double value)
 {
@@ -79,7 +77,7 @@ sim_get_quitreason(struct simulation const *simp)
     if(feof(stdin))
         return "The player quit";
 
-    // Shouldn't be possible to arrive here at runtime
+    // Shouldn't be possible to arrive here at runtime.
     return "A wizard zapped the lander idk";
 }
 
